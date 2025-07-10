@@ -62,28 +62,35 @@ public class AccurateBlockPlacement extends JavaPlugin implements Listener
 		onBlockBuildPacket(event);
 	    }
 	});
+	protocolManager.addPacketListener(new PacketAdapter(this, ListenerPriority.NORMAL, PacketType.Play.Client.USE_ITEM) {
+		@Override public void onPacketReceiving(final PacketEvent event) {
+			onBlockBuildPacket(event);
+		}
+	});
 	protocolManager.addPacketListener(new PacketAdapter(this, ListenerPriority.NORMAL, PacketType.Play.Client.CUSTOM_PAYLOAD) {
 	    @Override public void onPacketReceiving(final PacketEvent event) {
 		onCustomPayload(event);
 	    }
 	});
 	getServer().getPluginManager().registerEvents(this, this);
+		getServer().getMessenger().registerOutgoingPluginChannel(this, "carpet:hello");
     }
 
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-	PacketContainer packet = new PacketContainer(PacketType.Play.Server.CUSTOM_PAYLOAD);
-	packet.getMinecraftKeys().writeSafely(0,new MinecraftKey("carpet", "hello"));
-	ByteArrayOutputStream rawData = new ByteArrayOutputStream();
-	DataOutputStream outputStream = new DataOutputStream(rawData);
-	try {
-	    StreamSerializer.getDefault().serializeVarInt(outputStream, 69);
-	    StreamSerializer.getDefault().serializeString(outputStream, "SPIGOT-ABP");
-	    packet.getModifier().writeSafely(1, MinecraftReflection.getPacketDataSerializer(Unpooled.wrappedBuffer(rawData.toByteArray())));
-	    protocolManager.sendServerPacket(event.getPlayer(), packet);
-	}
-	catch (IOException ignored) {}
+		event.getPlayer().sendPluginMessage(this, "carpet:hello", new byte[]{ 1, 2, 3 });
+//	PacketContainer packet = new PacketContainer(PacketType.Play.Server.CUSTOM_PAYLOAD);
+//	packet.getMinecraftKeys().writeSafely(0,new MinecraftKey("carpet", "hello"));
+//	ByteArrayOutputStream rawData = new ByteArrayOutputStream();
+//	DataOutputStream outputStream = new DataOutputStream(rawData);
+//	try {
+//	    StreamSerializer.getDefault().serializeVarInt(outputStream, 69);
+//	    StreamSerializer.getDefault().serializeString(outputStream, "SPIGOT-ABP");
+//	    packet.getModifier().writeSafely(1, MinecraftReflection.getPacketDataSerializer(Unpooled.wrappedBuffer(rawData.toByteArray())));
+//	    protocolManager.sendServerPacket(event.getPlayer(), packet);
+//	}
+//	catch (IOException ignored) {}
     }
 
     @EventHandler
