@@ -57,7 +57,7 @@ public class AccurateBlockPlacement extends JavaPlugin implements Listener
     @Override public void onEnable() {
 	getLogger().info("AccurateBlockPlacement loaded!");
 	protocolManager = ProtocolLibrary.getProtocolManager();
-	protocolManager.addPacketListener(new PacketAdapter(this, ListenerPriority.NORMAL, PacketType.Play.Client.USE_ITEM) {
+	protocolManager.addPacketListener(new PacketAdapter(this, ListenerPriority.NORMAL, PacketType.Play.Client.USE_ITEM_ON) {
 	    @Override public void onPacketReceiving(final PacketEvent event) {
 		onBlockBuildPacket(event);
 	    }
@@ -74,16 +74,16 @@ public class AccurateBlockPlacement extends JavaPlugin implements Listener
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
 	PacketContainer packet = new PacketContainer(PacketType.Play.Server.CUSTOM_PAYLOAD);
-	packet.getMinecraftKeys().write(0,new MinecraftKey("carpet", "hello"));
+	packet.getMinecraftKeys().writeSafely(0,new MinecraftKey("carpet", "hello"));
 	ByteArrayOutputStream rawData = new ByteArrayOutputStream();
 	DataOutputStream outputStream = new DataOutputStream(rawData);
 	try {
 	    StreamSerializer.getDefault().serializeVarInt(outputStream, 69);
 	    StreamSerializer.getDefault().serializeString(outputStream, "SPIGOT-ABP");
-	    packet.getModifier().write(1, MinecraftReflection.getPacketDataSerializer(Unpooled.wrappedBuffer(rawData.toByteArray())));
+	    packet.getModifier().writeSafely(1, MinecraftReflection.getPacketDataSerializer(Unpooled.wrappedBuffer(rawData.toByteArray())));
 	    protocolManager.sendServerPacket(event.getPlayer(), packet);
 	}
-	catch (IOException | InvocationTargetException ignored) {}
+	catch (IOException ignored) {}
     }
 
     @EventHandler
@@ -274,7 +274,8 @@ public class AccurateBlockPlacement extends JavaPlugin implements Listener
     private void onBlockBuildPacket(final PacketEvent event) {
         Player player = event.getPlayer();
         PacketContainer packet = event.getPacket();
-	MovingObjectPositionBlock clickInformation = packet.getMovingBlockPositions().read(0);
+	MovingObjectPositionBlock clickInformation = packet.getMovingBlockPositions().readSafely(0);
+	if (clickInformation == null) return;
 	BlockPosition blockPosition = clickInformation.getBlockPosition();
 	Vector posVector = clickInformation.getPosVector();
 
@@ -296,11 +297,12 @@ public class AccurateBlockPlacement extends JavaPlugin implements Listener
 
     private void onCustomPayload(final PacketEvent event) {
 	PacketContainer packet = event.getPacket();
-	MinecraftKey key = packet.getMinecraftKeys().read(0);
-	if ( !(key.getPrefix().equals("carpet") && key.getKey().equals("hello"))) {
+	MinecraftKey key = packet.getMinecraftKeys().readSafely(0);
+	if ( key == null || (!(key.getPrefix().equals("carpet") && key.getKey().equals("hello")))) {
 	    return;
 	}
-	ByteBuf data = (ByteBuf) packet.getModifier().read(1);
+	ByteBuf data = (ByteBuf) packet.getModifier().readSafely(1);
+	if (data == null) return;
 	try {
 	    DataInputStream in = new DataInputStream(new ByteBufInputStream(data));
 	    if (StreamSerializer.getDefault().deserializeVarInt(in) != 420) {
@@ -317,7 +319,7 @@ public class AccurateBlockPlacement extends JavaPlugin implements Listener
 	    StreamSerializer.getDefault().serializeCompound(outputStream, abpRule);
 	    rulePacket.getModifier().write(1, MinecraftReflection.getPacketDataSerializer(Unpooled.wrappedBuffer(rawData.toByteArray())));
 	    protocolManager.sendServerPacket(event.getPlayer(), rulePacket);
-	} catch (IOException | InvocationTargetException ignored) {}
+	} catch (IOException ignored) {}
     }
 
 }
